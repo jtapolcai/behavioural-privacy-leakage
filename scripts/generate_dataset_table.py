@@ -83,20 +83,36 @@ rg_weth_total = {k: rg_weth[LABEL_BEFORE][k] + rg_weth[LABEL_AFTER][k]
 rg_erc20_total = {k: rg_all[k] - rg_weth_total[k] for k in ("D", "W")}
 
 # ── Privacy Pools ETH deposits ────────────────────────────────────────────────
-pp_dep = {LABEL_BEFORE: 0, LABEL_AFTER: 0}
-with open(PP_DIR_DEFAULT / "processed_privacypools_eth_pool_deposits.csv") as f:
-    for row in csv.DictReader(f):
-        t_str = row.get("time", "")
-        if t_str:
-            pp_dep[period(parse_date(t_str))] += 1
+_pp_dep_csv = PP_DIR_DEFAULT / "processed_privacypools_eth_pool_deposits.csv"
+_pp_wit_csv = PP_DIR_DEFAULT / "processed_privacypools_data_withdraws.csv"
+_pp_available = _pp_dep_csv.exists() and _pp_wit_csv.exists()
 
-# ── Privacy Pools ETH withdrawals ─────────────────────────────────────────────
-pp_wit = {LABEL_BEFORE: 0, LABEL_AFTER: 0}
-with open(PP_DIR_DEFAULT / "processed_privacypools_data_withdraws.csv") as f:
-    for row in csv.DictReader(f):
-        t_str = row.get("evt_block_time", "")
-        if t_str:
-            pp_wit[period(parse_date(t_str))] += 1
+pp_dep = {LABEL_BEFORE: None, LABEL_AFTER: None}
+pp_wit = {LABEL_BEFORE: None, LABEL_AFTER: None}
+
+if _pp_available:
+    pp_dep = {LABEL_BEFORE: 0, LABEL_AFTER: 0}
+    with open(_pp_dep_csv) as f:
+        for row in csv.DictReader(f):
+            t_str = row.get("time", "")
+            if t_str:
+                pp_dep[period(parse_date(t_str))] += 1
+
+    # ── Privacy Pools ETH withdrawals ─────────────────────────────────────────
+    pp_wit = {LABEL_BEFORE: 0, LABEL_AFTER: 0}
+    with open(_pp_wit_csv) as f:
+        for row in csv.DictReader(f):
+            t_str = row.get("evt_block_time", "")
+            if t_str:
+                pp_wit[period(parse_date(t_str))] += 1
+else:
+    import warnings
+    warnings.warn(f"PP data not found at {PP_DIR_DEFAULT} — PP rows will be None")
+
+_pp_dep_tot = (pp_dep[LABEL_BEFORE] + pp_dep[LABEL_AFTER]
+               if pp_dep[LABEL_BEFORE] is not None else None)
+_pp_wit_tot = (pp_wit[LABEL_BEFORE] + pp_wit[LABEL_AFTER]
+               if pp_wit[LABEL_BEFORE] is not None else None)
 
 # ── assemble table ─────────────────────────────────────────────────────────────
 rows = [
@@ -114,8 +130,7 @@ rows = [
     ("Privacy Pools", "ETH",
      pp_dep[LABEL_BEFORE], pp_wit[LABEL_BEFORE],
      pp_dep[LABEL_AFTER],  pp_wit[LABEL_AFTER],
-     pp_dep[LABEL_BEFORE] + pp_dep[LABEL_AFTER],
-     pp_wit[LABEL_BEFORE] + pp_wit[LABEL_AFTER],
+     _pp_dep_tot, _pp_wit_tot,
      "ETH pool only; launched 2023"),
     ("Privacy Pools", "ERC-20",
      None, None, None, None, None, None,

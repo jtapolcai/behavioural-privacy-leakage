@@ -29,15 +29,19 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+# ── path config (override via env vars BPLEAK_RG_DATA / BPLEAK_PP_DATA / BPLEAK_FIGURES) ──
+import sys as _sys; _sys.path.insert(0, str(Path(__file__).parent))
+from _paths import RG_DATA as _RG_DATA, PP_DATA as _PP_DATA, FIGURES as _FIGURES
+
 # ── Paths ────────────────────────────────────────────────────────────────────
 import argparse
-PAPER   = Path(__file__).resolve().parents[1]
+PAPER        = Path(__file__).resolve().parents[1]
 SOURCE_PAPER = PAPER
-FIGS    = PAPER / "Figures" / "data"      # canonical data CSVs/JSON
-RG_DATA = _RG_DATA.parent  # via _paths
-AGG         = RG_DATA / "data" / "aggregated"
-WITNESS_CSV = RG_DATA / "results" / "witness" / "witness_kto1_all_step0.0001.csv"
-PP_EV       = SOURCE_PAPER / "analysis" / "pp_origin_entropy" / "per_withdrawal.csv"
+FIGS         = _FIGURES / "entropy_models"   # outputs from compute_rg_entropy_models.py
+RG_DATA      = _RG_DATA                      # railgun data/ directory
+AGG          = RG_DATA / "aggregated"
+WITNESS_CSV  = _RG_DATA.parent / "results" / "witness" / "witness_kto1_all_step0.0001.csv"
+PP_EV        = SOURCE_PAPER / "analysis" / "pp_origin_entropy" / "per_withdrawal.csv"
 
 # ── Parameters ───────────────────────────────────────────────────────────────
 K_REL   = 10      # relayer exclusion threshold
@@ -74,11 +78,13 @@ def compute_rg(vals: dict) -> None:
     print(f"  M1 (addr-level) : {vals['rg_m1']:.4f}")
 
     # ── M2 (address-level calibrated) ─────────────────────────────────────
-    rg_m2 = pd.read_csv(FIGS / "rg_m2_addr_canonical.csv")
-    vals["rg_m2"] = median_finite(rg_m2["H2_addr"])
-    print(f"  M2 (addr-level) : {vals['rg_m2']:.4f}")
+    rg_m2 = pd.read_csv(FIGS / "rg_m2_canonical.csv")
+    # column name may be H2_canonical (from compute_m2_canonical.py) or H2_addr
+    _m2_col = "H2_canonical" if "H2_canonical" in rg_m2.columns else "H2_addr"
+    vals["rg_m2"] = median_finite(rg_m2[_m2_col])
+    print(f"  M2              : {vals['rg_m2']:.4f}")
     m2_dict = dict(zip(rg_m2["agg_id"].astype(int),
-                        rg_m2["H2_addr"].astype(float)))
+                        rg_m2[_m2_col].astype(float)))
 
     # ── Load deposit addresses for AR ─────────────────────────────────────
     print("  Loading deposit data for M3-AR …")
@@ -298,8 +304,13 @@ def compute_pp(vals: dict) -> None:
 def compute_coverage(vals: dict) -> None:
     print("\n=== Coverage statistics ===")
 
+    _ptgr_path = FIGS / "rg_pt_gr_counts.csv"
+    if not _ptgr_path.exists():
+        print(f"  ⚠  {_ptgr_path.name} not found — skipping coverage statistics")
+        return
+
     m3 = pd.read_csv(FIGS / "rg_m3_canonical.csv")
-    ptgr = pd.read_csv(FIGS / "rg_pt_gr_counts.csv")
+    ptgr = pd.read_csv(_ptgr_path)
     rg_ev = pd.read_csv(FIGS / "rg_entropy_per_withdrawal.csv")
     n_rg  = len(rg_ev[rg_ev["horizon"] == "all"])
 
@@ -397,16 +408,25 @@ def main() -> None:
     global FIGS, PP_EV
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-paper", type=Path, default=PAPER)
-    parser.add_argument("--output-dir", type=Path, default=PAPER / "Figures")
+    parser.add_argument("--output-dir", type=Path, default=_FIGURES)
+    parser.add_argument("--figs-dir", type=Path, default=None,
+                        help="Directory with entropy_models/ outputs "
+                             "[default: _FIGURES/entropy_models via _paths.py]")
     args = parser.parse_args()
-    FIGS = args.source_paper / "Figures" / "data"
+    # Use entropy_models subdir from the pipeline output (not legacy Figures/data/)
+    FIGS = args.figs_dir if args.figs_dir else (_FIGURES / "entropy_models")
     PP_EV = args.source_paper / "analysis" / "pp_origin_entropy" / "per_withdrawal.csv"
     vals = {}
     compute_rg(vals)
-    compute_pp(vals)
-    compute_coverage(vals)
+    if PP_EV.exists():
+        compute_pp(vals)
+        compute_coverage(vals)
+    else:
+        print(f"  ⚠  PP per_withdrawal.csv not found — skipping PP and coverage sections")
     vals["coverage_note"] = "Hit fractions are export-flag diagnostics, not verified true-history coverage."
-    write_table(vals, args.output_dir)
+    out_dir = args.output_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+    write_table(vals, out_dir)
     (FIGS / "table2_values.json").write_text(json.dumps(vals, indent=2, allow_nan=False) + "\n")
     print(json.dumps(vals, indent=2, allow_nan=False))
 

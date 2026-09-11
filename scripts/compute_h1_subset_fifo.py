@@ -173,12 +173,17 @@ fv_rg = report_and_save(dates_rg, cs_rg, cu_rg, ret_rg, fifo_rg, tll_rg,
 # 2.  Privacy Pools H1 subset  (pp_h1_pairs already has both timestamps)
 # ─────────────────────────────────────────────────────────────────────────────
 
+_pp_pairs_csv = FIG / "pp_h1_pairs.csv"
+if not _pp_pairs_csv.exists():
+    print("\n⚠  pp_h1_pairs.csv not found — skipping PP H1 subset (run without --skip-pp)")
+    import sys; sys.exit(0)
+
 print()
 print("=" * 60)
 print("Privacy Pools — same-address (H1) subset")
 print("=" * 60)
 
-pairs_pp = pd.read_csv(FIG / "pp_h1_pairs.csv")
+pairs_pp = pd.read_csv(_pp_pairs_csv)
 print(f"  PP H1 pairs: {len(pairs_pp):,}")
 
 pairs_pp["dep_time"]  = pd.to_datetime(pairs_pp["dep_time"],  utc=True)

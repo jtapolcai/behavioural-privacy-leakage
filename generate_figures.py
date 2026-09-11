@@ -209,9 +209,9 @@ def main() -> None:
         run("M3 hard filter",
             SCRIPTS / "compute_m3_hard_filter.py",
             ["--rg-data", rg, "--output-dir", fig], v, env)
-        run("M3 stochastic",
-            SCRIPTS / "compute_m3_stochastic.py",
-            ["--rg-data", rg, "--output-dir", fig], v, env)
+        # NOTE: compute_m3_stochastic.py requires per-deposit participation counts
+        # (item-level knapsack export) which are not available in the archived witness
+        # files.  Skip until the extended export is available.
 
     # ── 9. PP origin entropy (knapsack support) ──────────────────────────────
     if not args.skip_pp:
@@ -228,18 +228,26 @@ def main() -> None:
         SCRIPTS / "compute_rg_entropy_models.py",
         ["--rg-data", rg, "--output-dir", fig], v, env)
 
-    run("Combined entropy model table + tikz (M1–M4 RG+PP)",
-        SCRIPTS / "compute_entropy_models.py",
-        ["--rg-data", rg, "--pp-data", pp, "--output-dir", fig], v, env)
+    # Combined table needs PP per_withdrawal.csv — skip when PP data is absent
+    if not args.skip_pp:
+        run("Combined entropy model table + tikz (M1–M4 RG+PP)",
+            SCRIPTS / "compute_entropy_models.py",
+            ["--rg-data", rg, "--pp-data", pp, "--output-dir", fig], v, env)
 
     run("Table 2 — calibration parameters (obs→est)",
         SCRIPTS / "compute_table2.py",
-        ["--rg-data", rg, "--output-dir", fig], v, env)
+        ["--output-dir", fig], v, env)
 
-    # ── 11. H5 amount fingerprint + MC null ─────────────────────────────────
-    run("H5 amount fingerprint + Monte Carlo (RG + PP)",
-        SCRIPTS / "refresh_pp_measurements.py",
-        ["--pp-data", pp, "--rg-data", rg, "--output-dir", fig], v, env)
+    # ── 11. H5 amount fingerprint + MC null (PP knapsack exports) ───────────
+    # refresh_pp_measurements.py validates the PP knapsack ZIP exports;
+    # it takes --source (path to privacypools-deanonymization repo root) and
+    # --output (output dir).  Skip when PP data is unavailable.
+    if not args.skip_pp:
+        _pp_root = str(Path(pp).parents[1])   # …/privacypools-deanonymization
+        run("H5 amount fingerprint + Monte Carlo (PP knapsack)",
+            SCRIPTS / "refresh_pp_measurements.py",
+            ["--source", _pp_root,
+             "--output", str(Path(fig) / "generated_pp")], v, env)
 
     # ── done ─────────────────────────────────────────────────────────────────
     print(f"\n{'═'*70}")

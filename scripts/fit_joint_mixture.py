@@ -35,10 +35,66 @@ if pp_csv.exists():
     x_P = pp["dt_days"].values
 else:
     import warnings
-    warnings.warn("pp_h1_pairs.csv not found — skipping PP fit (run without --skip-pp to generate it)")
+    import warnings as _w
+    _w.warn("pp_h1_pairs.csv not found — running RG-only fit")
     x_P = None
-x_P = x_P[x_P > 1e-6]
 
+if x_P is None:
+    # ── RG-only 3-component EM (no PP data) ──────────────────────────────────
+    from scipy.optimize import minimize
+
+    def rg_only_em(x, pi0, mu0, n_iter=3000, tol=1e-12):
+        pi, mu = np.array(pi0, float), np.array(mu0, float)
+        K, n, ll_prev = len(mu), len(x), -np.inf
+        for _ in range(n_iter):
+            lr = np.column_stack([np.log(pi[k]) - np.log(mu[k]) - x / mu[k] for k in range(K)])
+            r = np.exp(lr - logsumexp(lr, axis=1, keepdims=True))
+            N = r.sum(0)
+            pi = N / n
+            mu = (r * x[:, None]).sum(0) / N
+            ll = logsumexp(lr, axis=1).sum()
+            if ll - ll_prev < tol:
+                break
+            ll_prev = ll
+        return pi, mu
+
+    pi_R, mu = rg_only_em(x_R, [0.10, 0.50, 0.40], [0.10, 8.0, 45.0])
+    order = np.argsort(mu); pi_R, mu = pi_R[order], mu[order]
+    labels = ["sprinters", "regulars", "hodlers"]
+    print("RG-only 3-component fit:")
+    print(f"{'Component':<12} {'μ (days)':>10}  {'π_Railgun':>10}")
+    for k in range(3):
+        print(f"  {labels[k]:<10}  {mu[k]:10.3f} d  ({mu[k]*24:6.1f} h)  {pi_R[k]:10.4f}")
+
+    t_lo_R = np.log10(max(x_R.min() * 0.5, 1e-3))
+    t_hi_R = np.log10(x_R.max() * 1.05)
+
+    def make_tex_rg(pi, mu, t_lo, t_hi, style, legend, outfile):
+        terms = " + ".join(
+            f"{pi[k]:.10f}*(1-exp(-10^\\u/{mu[k]:.10f}))"
+            for k in range(3)
+        )
+        lines = [
+            f"% RG-only 3-component fit — {legend}",
+            f"% pi = [{pi[0]:.6f}, {pi[1]:.6f}, {pi[2]:.6f}]",
+            f"% mu = [{mu[0]:.6f}, {mu[1]:.6f}, {mu[2]:.6f}] days",
+            f"\\addplot [{style}, no marks, domain={t_lo:.4f}:{t_hi:.4f},",
+            r"  samples=300, variable=\u]",
+            f"  ({{10^\\u}},{{{terms}}});",
+            f"\\addlegendentry{{{legend}}}",
+        ]
+        with open(outfile, "w") as fh:
+            fh.write("\n".join(lines) + "\n")
+        print(f"Wrote {outfile}")
+
+    make_tex_rg(pi_R, mu, t_lo_R, t_hi_R,
+                style="thick, colorRailgun, densely dotted",
+                legend="Railgun 3-component fit",
+                outfile=str(_FIGURES / "timing_joint_railgun_fit.tex"))
+    print("\nDone (RG-only; re-run without --skip-pp for joint PP fit).")
+    import sys; sys.exit(0)
+
+x_P = x_P[x_P > 1e-6]
 n_R, n_P = len(x_R), len(x_P)
 print(f"Railgun : {n_R} observations  (min={x_R.min():.3f} d, median={np.median(x_R):.2f} d)")
 print(f"PP      : {n_P} observations  (min={x_P.min():.3f} d, median={np.median(x_P):.2f} d)")
@@ -144,7 +200,7 @@ make_tex(pi_R, mu,
          t_lo_R, t_hi_R,
          style="thick, colorRailgun, densely dotted",
          legend="Railgun joint 3-component fit",
-         outfile="Figures/timing_joint_railgun_fit.tex")
+         outfile=str(_FIGURES / "timing_joint_railgun_fit.tex"))
 
 make_tex(pi_P, mu,
          t_lo_P, t_hi_P,

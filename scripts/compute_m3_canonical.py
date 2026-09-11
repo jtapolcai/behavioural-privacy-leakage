@@ -96,19 +96,24 @@ def main() -> None:
     print(f"  {len(wit_t_s):,} withdrawals")
 
     # ── Load PT/GR evidence ─────────────────────────────────────────────
-    print("Loading PT/GR evidence …")
-    ptgr = pd.read_csv(PTGR_CSV)
-    # Build agg_id → set of PT-linked deposit agg_ids
     pt_map: dict[int, set[int]] = {}
     gr_map: dict[int, set[int]] = {}
-    for _, row in ptgr.iterrows():
-        wid = int(row["withdrawal_agg_id"])
-        raw_pt = str(row["deposit_agg_ids_pt"]) if pd.notna(row["deposit_agg_ids_pt"]) else ""
-        raw_gr = str(row["deposit_agg_ids_gr"]) if pd.notna(row["deposit_agg_ids_gr"]) else ""
-        pt_ids = {int(x) for x in raw_pt.split("|") if x and x != "nan"}
-        gr_ids = {int(x) for x in raw_gr.split("|") if x and x != "nan"}
-        if pt_ids: pt_map[wid] = pt_ids
-        if gr_ids: gr_map[wid] = gr_ids
+    if PTGR_CSV.exists():
+        print("Loading PT/GR evidence …")
+        ptgr = pd.read_csv(PTGR_CSV)
+        for _, row in ptgr.iterrows():
+            wid = int(row["withdrawal_agg_id"])
+            raw_pt = str(row["deposit_agg_ids_pt"]) if pd.notna(row["deposit_agg_ids_pt"]) else ""
+            raw_gr = str(row["deposit_agg_ids_gr"]) if pd.notna(row["deposit_agg_ids_gr"]) else ""
+            pt_ids = {int(x) for x in raw_pt.split("|") if x and x != "nan"}
+            gr_ids = {int(x) for x in raw_gr.split("|") if x and x != "nan"}
+            if pt_ids: pt_map[wid] = pt_ids
+            if gr_ids: gr_map[wid] = gr_ids
+    else:
+        import warnings
+        warnings.warn(f"PT/GR evidence not found at {PTGR_CSV} — "
+                      "running AR-only (GR and PT evidence unavailable). "
+                      "Run export_pt_gr_counts.py to generate it.")
 
     # Build address → set of deposit agg_ids (for AR lookup)
     dep_addr_to_ids: dict[str, set[int]] = {}

@@ -77,8 +77,14 @@ def quantiles(arr, qs=(0.10, 0.25, 0.50, 0.75, 0.90)):
     return {f"p{int(q*100)}": float(np.quantile(arr, q)) for q in qs}
 
 # ── 1.  Load pre-computed PP per-withdrawal results ──────────────────────────
+_pp_pw = ANLYS / "per_withdrawal.csv"
+if not _pp_pw.exists():
+    import warnings
+    warnings.warn(f"PP per-withdrawal file not found at {_pp_pw}. "
+                  "Run with PP data (without --skip-pp) to generate it. Exiting.")
+    import sys; sys.exit(0)
 print("Loading PP per-withdrawal entropy results …")
-pw_rows = read_csv(ANLYS / "per_withdrawal.csv")
+pw_rows = read_csv(_pp_pw)
 
 # Use the "exact_rows_collapsed" scenario and "reuse_mix" time model as primary.
 # Also keep little_exp and fifo_exp for comparison.

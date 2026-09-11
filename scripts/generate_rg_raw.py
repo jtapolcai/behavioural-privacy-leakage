@@ -161,6 +161,70 @@ def generate_h1_coverage(h1: pd.DataFrame, un: pd.DataFrame, out_dir: Path) -> N
     print(f"  Written: figure_ch4_06_h1_coverage.csv  ({len(cov):,} days)")
 
 
+def generate_dataset_inventory(rg: "Path", sh_raw: "pd.DataFrame",
+                               un_raw: "pd.DataFrame", out_dir: "Path") -> None:
+    """Dataset inventory CSV used by generate_dataset_table.py.
+
+    Reads aggregated (all-asset) shield/unshield CSVs to get total row counts
+    and timestamp ranges for the full Railgun dataset (not WETH-only).
+    """
+    agg_dir = rg / "aggregated"
+    sh_agg_csv = agg_dir / "eth_shield_aggregated.csv"
+    un_agg_csv = agg_dir / "eth_unshields_aggregated.csv"
+
+    rows = []
+    if sh_agg_csv.exists():
+        sh_agg = pd.read_csv(sh_agg_csv)
+        n = len(sh_agg)
+        # timestamps stored as nanoseconds integers
+        t_col = "last_time_ns" if "last_time_ns" in sh_agg.columns else sh_agg.columns[0]
+        if t_col in sh_agg.columns:
+            ts = sh_agg[t_col].dropna().astype(float)
+            t_min = pd.to_datetime(ts.min() / 1e9, unit="s", utc=True).date()
+            t_max = pd.to_datetime(ts.max() / 1e9, unit="s", utc=True).date()
+        else:
+            t_min = t_max = ""
+        rows.append({"label": "RG Shields (all assets)", "color": "colorRailgun",
+                     "rows": n, "start": str(t_min), "end": str(t_max)})
+    elif sh_raw is not None:
+        # Fallback: use WETH transaction data
+        n = len(sh_raw)
+        t_min = sh_raw["time"].min().date()
+        t_max = sh_raw["time"].max().date()
+        rows.append({"label": "RG Shields (WETH)", "color": "colorRailgun",
+                     "rows": n, "start": str(t_min), "end": str(t_max)})
+
+    if un_agg_csv.exists():
+        un_agg = pd.read_csv(un_agg_csv)
+        n = len(un_agg)
+        t_col = "first_time_ns" if "first_time_ns" in un_agg.columns else un_agg.columns[0]
+        if t_col in un_agg.columns:
+            ts = un_agg[t_col].dropna().astype(float)
+            t_min = pd.to_datetime(ts.min() / 1e9, unit="s", utc=True).date()
+            t_max = pd.to_datetime(ts.max() / 1e9, unit="s", utc=True).date()
+        else:
+            t_min = t_max = ""
+        rows.append({"label": "RG Unshields (all assets)", "color": "colorRailgun",
+                     "rows": n, "start": str(t_min), "end": str(t_max)})
+    elif un_raw is not None:
+        n = len(un_raw)
+        t_min = un_raw["time"].min().date()
+        t_max = un_raw["time"].max().date()
+        rows.append({"label": "RG Unshields (WETH)", "color": "colorRailgun",
+                     "rows": n, "start": str(t_min), "end": str(t_max)})
+
+    if rows:
+        import csv as _csv
+        out = out_dir / "figure_ch4_01_dataset_inventory.csv"
+        with open(out, "w", newline="") as f:
+            w = _csv.DictWriter(f, fieldnames=["label", "color", "rows", "start", "end"])
+            w.writeheader()
+            w.writerows(rows)
+        print(f"  Written: figure_ch4_01_dataset_inventory.csv  ({len(rows)} rows)")
+    else:
+        print("  ⚠  No aggregated CSV found — figure_ch4_01_dataset_inventory.csv not written")
+
+
 def main() -> None:
     args = parse_args()
     rg   = args.rg_data
@@ -181,44 +245,47 @@ def main() -> None:
     sh_csv = tx_dir / "eth_shield.csv"
     un_csv = tx_dir / "eth_unshields.csv"
 
+    sh_raw = un_raw = None
     if not sh_csv.exists() or not un_csv.exists():
         print(f"  ⚠  Transaction CSVs not found at {tx_dir} — skipping weekly/flow")
-        return
+    else:
+        print("  Loading transaction CSVs …")
+        sh_raw = pd.read_csv(sh_csv)
+        un_raw = pd.read_csv(un_csv)
+        sh_raw["time"] = pd.to_datetime(sh_raw["time"], utc=True, errors="coerce")
+        un_raw["time"] = pd.to_datetime(un_raw["time"], utc=True, errors="coerce")
+        sh_raw = sh_raw[sh_raw["time"].notna()].copy()
+        un_raw = un_raw[un_raw["time"].notna()].copy()
 
-    print("  Loading transaction CSVs …")
-    sh = pd.read_csv(sh_csv)
-    un = pd.read_csv(un_csv)
-    sh["time"] = pd.to_datetime(sh["time"], utc=True, errors="coerce")
-    un["time"] = pd.to_datetime(un["time"], utc=True, errors="coerce")
-    sh = sh[sh["time"].notna()].copy()
-    un = un[un["time"].notna()].copy()
+        # Amount column normalisation
+        for df in (sh_raw, un_raw):
+            if "amount_eth" not in df.columns:
+                for col in ("value_eth", "eth_amount", "amount"):
+                    if col in df.columns:
+                        df.rename(columns={col: "amount_eth"}, inplace=True)
+                        break
+                else:
+                    df["amount_eth"] = 0.0
 
-    # Amount column normalisation
-    for df in (sh, un):
-        if "amount_eth" not in df.columns:
-            # try common alternatives
-            for col in ("value_eth", "eth_amount", "amount"):
-                if col in df.columns:
-                    df.rename(columns={col: "amount_eth"}, inplace=True)
-                    break
-            else:
-                df["amount_eth"] = 0.0
+        # Filter protocol addresses and WETH only
+        sh = sh_raw.copy(); un = un_raw.copy()
+        if "token_symbol" in sh.columns:
+            sh = sh[sh["token_symbol"].str.upper() == "WETH"]
+            un = un[un["token_symbol"].str.upper() == "WETH"]
+        if "from_address" in sh.columns:
+            sh = sh[~_norm(sh["from_address"]).isin(PROTOCOL_ADDRS)]
+        if "to_address" in un.columns:
+            un = un[~_norm(un["to_address"]).isin(PROTOCOL_ADDRS)]
 
-    # Filter protocol addresses and WETH only
-    if "token_symbol" in sh.columns:
-        sh = sh[sh["token_symbol"].str.upper() == "WETH"]
-        un = un[un["token_symbol"].str.upper() == "WETH"]
-    if "from_address" in sh.columns:
-        sh = sh[~_norm(sh["from_address"]).isin(PROTOCOL_ADDRS)]
-    if "to_address" in un.columns:
-        un = un[~_norm(un["to_address"]).isin(PROTOCOL_ADDRS)]
+        generate_weekly_counts(sh, un, out)
+        generate_cumulative_flow(sh, un, out)
 
-    generate_weekly_counts(sh, un, out)
-    generate_cumulative_flow(sh, un, out)
+        if h1_csv.exists():
+            h1 = pd.read_csv(h1_csv)
+            generate_h1_coverage(h1, un, out)
 
-    if h1_csv.exists():
-        h1 = pd.read_csv(h1_csv)
-        generate_h1_coverage(h1, un, out)
+    # ── Dataset inventory (uses aggregated CSVs when available) ──────────────
+    generate_dataset_inventory(rg, sh_raw, un_raw, out)
 
     print("  generate_rg_raw.py done.")
 
