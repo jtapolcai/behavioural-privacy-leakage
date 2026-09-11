@@ -185,15 +185,18 @@ def compute_rg(vals: dict) -> None:
     n_skip_all = int(skip_mask.sum())
     n_sat_all = int((h_all_df["saturated"].values == 1).sum())
 
-    # p_cov=0.25 for RG: p4(0.25) = 0.5*p2 + 0.5*p4(pfeas)
-    # => H4_025 ≈ 0.5*H2_addr + 0.5*H_knap_addr  (lower bound by concavity)
+    # p_cov=0.25 for RG: per-target mixing weight α = p_cov / p_feas
+    # (so that p_feas * α = p_cov overall).
+    # H4_025(w) ≈ α*H_knap(w) + (1-α)*H2(w)  for hit targets (concavity bound)
+    #           = H2(w)                         for skip targets
+    _alpha_025 = 0.25 / vals["rg_p_feas"]   # ≈ 0.2565 for p_feas≈0.9746
     h4_rg_pcov025 = np.empty(len(h_all_df), dtype=float)
     for i, (is_skip, ti_val) in enumerate(zip(skip_mask, ti_all)):
         h2_i = m2_dict.get(int(ti_val), math.nan)
         if is_skip:
             h4_rg_pcov025[i] = h2_i
         else:
-            h4_rg_pcov025[i] = 0.5 * h2_i + 0.5 * h4_rg[i]
+            h4_rg_pcov025[i] = _alpha_025 * h4_rg[i] + (1 - _alpha_025) * h2_i
     vals["rg_m4_pcov025"] = median_finite(h4_rg_pcov025)
     vals["rg_m4_pcov05"] = None   # unavailable: need raw participation weights
     vals["rg_h_knap"] = vals["rg_m4_knap"]
