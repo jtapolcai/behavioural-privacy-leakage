@@ -19,7 +19,7 @@ from scipy.special import logsumexp
 import os, sys
 
 # ── 1. Load raw delay data ────────────────────────────────────────────────────
-data_path = "Figures/cdf_deltas_data_full.csv"
+data_path = _FIGURES / "cdf_deltas_data_full.csv"
 df = pd.read_csv(data_path)
 x = df["days"].values
 x = x[x > 1e-6]          # drop zeros / sub-second noise

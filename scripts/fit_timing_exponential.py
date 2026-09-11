@@ -16,7 +16,7 @@ from _paths import RG_DATA as _RG_DATA, PP_DATA as _PP_DATA, FIGURES as _FIGURES
 
 def main():
     root = Path(__file__).resolve().parents[1]
-    source = root / 'Figures/cdf_deltas_data_full.csv'
+    source = _FIGURES / 'cdf_deltas_data_full.csv'
     rows = list(csv.DictReader(source.open()))
     times = sorted(float(r['days']) for r in rows)
     if not times or any(not math.isfinite(t) or t < 0 for t in times):

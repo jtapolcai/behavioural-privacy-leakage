@@ -25,12 +25,18 @@ from scipy.special import logsumexp
 from scipy.optimize import brentq
 
 # ── 1. Load raw delay data ────────────────────────────────────────────────────
-rg = pd.read_csv("Figures/cdf_deltas_data_full.csv")
+rg = pd.read_csv(_FIGURES / "cdf_deltas_data_full.csv")
 x_R = rg["days"].values
 x_R = x_R[x_R > 1e-6]
 
-pp = pd.read_csv("Figures/pp_h1_pairs.csv")
-x_P = pp["dt_days"].values
+pp_csv = _FIGURES / "pp_h1_pairs.csv"
+if pp_csv.exists():
+    pp = pd.read_csv(pp_csv)
+    x_P = pp["dt_days"].values
+else:
+    import warnings
+    warnings.warn("pp_h1_pairs.csv not found — skipping PP fit (run without --skip-pp to generate it)")
+    x_P = None
 x_P = x_P[x_P > 1e-6]
 
 n_R, n_P = len(x_R), len(x_P)
@@ -144,6 +150,6 @@ make_tex(pi_P, mu,
          t_lo_P, t_hi_P,
          style="thick, colorPrivacyPools, densely dotted",
          legend="PP joint 3-component fit",
-         outfile="Figures/timing_joint_pp_fit.tex")
+         outfile=str(_FIGURES / "timing_joint_pp_fit.tex"))
 
 print("\nDone.")

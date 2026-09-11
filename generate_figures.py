@@ -125,6 +125,21 @@ def main() -> None:
         clone_or_update(PP_REPO, PP_DIR)
     else:
         print("--skip-clone: skipping git operations")
+        # Auto-detect old local checkout if data/ subdir is empty
+        old_rg = ROOT.parent / "railgun_deanonymization-48A0" / "data"
+        if not args.rg_data.exists() and old_rg.exists():
+            print(f"  Auto-detected existing RG data at {old_rg}")
+            args.rg_data = old_rg
+            env["BPLEAK_RG_DATA"] = str(old_rg)
+            rg = str(old_rg)
+
+    # ── 1b. Stage 0: generate pre-processed RG CSVs ─────────────────────────
+    # Produces: cdf_deltas_data_full.csv, figure_ch4_02_weekly_boundary_counts.csv,
+    #           figure_ch4_03_*.csv, figure_ch4_06_h1_coverage.csv
+    if not args.skip_rg:
+        run("Stage 0 — generate pre-processed RG CSVs from transactions",
+            SCRIPTS / "generate_rg_raw.py",
+            ["--rg-data", rg, "--output-dir", fig], v, env)
 
     # ── 2. Timing model fit ──────────────────────────────────────────────────
     # Outputs: figure_ch4_h1_temporal_{cdf,pdf}*.csv

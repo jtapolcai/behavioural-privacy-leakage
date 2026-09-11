@@ -14,7 +14,7 @@ import numpy as np
 from scipy.optimize import least_squares
 
 root = Path(__file__).resolve().parents[1]
-source = root/'Figures/cdf_deltas_data_full.csv'
+source = _FIGURES / 'cdf_deltas_data_full.csv'
 rows = list(csv.DictReader(source.open()))
 t = np.sort(np.array([float(r['days']) for r in rows]))
 assert np.all(np.isfinite(t)) and np.all(t >= 0)
