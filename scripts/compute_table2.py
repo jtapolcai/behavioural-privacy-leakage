@@ -423,6 +423,13 @@ def main() -> None:
         compute_coverage(vals)
     else:
         print(f"  ⚠  PP per_withdrawal.csv not found — skipping PP and coverage sections")
+        # Pre-fill all PP template placeholders with None so write_table() can
+        # substitute them with "---" instead of raising "Unresolved table value".
+        for _k in ("pp_m1", "pp_m2", "pp_m3_ar", "pp_m3_ar_gr",
+                   "pp_m3_ar_gr_pt_10", "pp_m3_ar_gr_pt_inf",
+                   "pp_m4_pcov025", "pp_m4_pcov_pfeas",
+                   "pp_all_earlier_baseline"):
+            vals.setdefault(_k, None)
     vals["coverage_note"] = "Hit fractions are export-flag diagnostics, not verified true-history coverage."
     out_dir = args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
