@@ -127,7 +127,10 @@ def main() -> None:
     if not args.skip_clone:
         banner("Clone / update source repos")
         clone_or_update(RG_REPO, RG_DIR)
-        clone_or_update(PP_REPO, PP_DIR)
+        if not args.skip_pp:
+            clone_or_update(PP_REPO, PP_DIR)
+        else:
+            print("  [privacypools-deanonymization] skipped (--skip-pp)")
     else:
         print("--skip-clone: skipping git operations")
         # Auto-detect old local checkout if data/ subdir is empty
