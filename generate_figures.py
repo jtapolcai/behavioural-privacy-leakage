@@ -77,6 +77,11 @@ def clone_or_update(url: str, dest: Path) -> None:
         else:
             print(f"  [{name}] up to date.")
     else:
+        # dest exists but has no .git — leftover from a failed clone; remove it
+        if dest.exists():
+            import shutil
+            print(f"  [{name}] removing incomplete directory before cloning …")
+            shutil.rmtree(dest)
         print(f"  [{name}] cloning from {url} …")
         subprocess.run(["git", "clone", url, str(dest)], check=True)
 
