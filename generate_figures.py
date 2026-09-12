@@ -33,7 +33,7 @@ DATA    = ROOT / "data"
 SCRIPTS = ROOT / "scripts"
 
 RG_REPO = "https://github.com/c0rt3x1337x/railgun_deanonymization"
-PP_REPO = "git@github.com:alexistrihine-pixel/privacypools-deanonymization.git"
+PP_REPO = "https://github.com/alexistrihine-pixel/privacypools-deanonymization.git"
 
 RG_DIR  = DATA / "railgun_deanonymization"
 PP_DIR  = DATA / "privacypools-deanonymization"
