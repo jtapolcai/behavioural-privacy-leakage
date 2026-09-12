@@ -94,8 +94,7 @@ wa = np.array([v for t, v, rec, rel in withdrawals], dtype=float)
 ci = np.cumsum(da)
 co = np.cumsum(wa)
 
-pi = np.array([0.065, 0.349, 0.586])
-mu = np.array([0.09,  8.79,  246.0])
+from _scenario_params import PP_PI as pi, PP_MU as mu  # declared scenario weights/scales
 
 # ── PT (direct tx link) evidence ─────────────────────────────────────────────
 # Build set of (deposit_addr, withdraw_addr) pairs with a direct link

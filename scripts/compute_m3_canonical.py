@@ -30,8 +30,7 @@ import numpy as np
 import pandas as pd
 
 # ── Parameters ───────────────────────────────────────────────────────────────
-PI_CORR   = np.array([0.085, 0.461, 0.454])   # declared scenario weights
-MU_DAYS   = np.array([0.09,  8.79,  403.0])   # declared scenario scales (days)
+from _scenario_params import RG_PI as PI_CORR, RG_MU as MU_DAYS  # declared scenario weights/scales
 ALPHA_P   = 10.0    # PT soft-boost factor
 K_REL     = 10      # relayer exclusion threshold (gas payers with >= K_REL tx)
 

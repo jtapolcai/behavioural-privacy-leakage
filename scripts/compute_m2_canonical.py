@@ -35,9 +35,8 @@ from _paths import RG_DATA as _RG_DATA, PP_DATA as _PP_DATA, FIGURES as _FIGURES
 
 import numpy as np
 
-# ── Canonical model parameters (§3.2) ─────────────────────────────────────
-PI_CORR = np.array([0.085, 0.461, 0.454])  # corrected mixing weights
-MU_DAYS = np.array([0.09,  8.79,  403.0])  # calibrated μ_k^true (days)
+# ── Canonical model parameters (§3.2) — single source of truth ───────────
+from _scenario_params import RG_PI as PI_CORR, RG_MU as MU_DAYS
 
 SECS_PER_DAY = 86_400.0
 

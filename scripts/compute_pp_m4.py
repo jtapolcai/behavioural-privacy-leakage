@@ -97,8 +97,7 @@ wa    = np.array([v for t, v, rec, tx_h in withdrawals_sorted], dtype=float)
 ci    = np.cumsum(da)
 co    = np.cumsum(wa)
 
-pi = np.array([0.065, 0.349, 0.586])
-mu = np.array([0.09,  8.79,  246.0])
+from _scenario_params import PP_PI as pi, PP_MU as mu  # declared scenario weights/scales
 
 # ── index deposit by (addr, day_key) → list of indices in deposits_full ───────
 
