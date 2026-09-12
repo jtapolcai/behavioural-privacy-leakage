@@ -204,7 +204,10 @@ def run(source,paper,output):
         paper/'Figures/pp_h1_pairs.csv',paper/'Figures/figure_ch4_03_pp_retained_fifo.csv']
     metadata['sha256']={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
     (output/'model_manifest.json').write_text(json.dumps(metadata,indent=2)+'\n')
-    render(output,conditional_summary,mixture_summary,metadata)
+    try:
+        render(output, conditional_summary, mixture_summary, metadata)
+    except ImportError as _e:
+        print(f"[render skipped] {_e} — install matplotlib to generate plots")
 
 
 def render(output,cs,ms,metadata):

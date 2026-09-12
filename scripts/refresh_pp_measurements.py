@@ -159,9 +159,14 @@ def render_outputs(out, summaries, score_values, report):
                  "not verified funding links.")
     (out / "knapsack_cohort_note.tex").write_text("\n".join(notes)+"\n")
     # Matplotlib is needed only for the figure. CSV/LaTeX calculations use stdlib.
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError as _e:
+        print(f"[render skipped] {_e} — install matplotlib to generate plots")
+        return
+
     fig, ax = plt.subplots(figsize=(6.5, 3.3), layout="constrained")
     bottom = [0.0]*len(summaries)
     for field, label, color in [
