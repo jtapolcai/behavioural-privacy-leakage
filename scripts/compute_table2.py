@@ -422,6 +422,8 @@ def write_macros(vals: dict, output_dir: Path) -> Path:
         nc("RGeffMthreeBest", eff("rg_m3_ar_gr_pt_inf")),
         nc("PPMthreeAR",      ent("pp_m3_ar")),
         nc("PPMthreeARGR",    ent("pp_m3_ar_gr")),
+        nc("RGMthreeARGRPTten", ent("rg_m3_ar_gr_pt_10")),
+        nc("PPMthreeARGRPTten", ent("pp_m3_ar_gr_pt_10")),
         nc("PPMthreeBest",    ent("pp_m3_ar_gr_pt_inf")),
         nc("PPeffMthreeBest", eff("pp_m3_ar_gr_pt_inf")),
         "%",
@@ -442,6 +444,9 @@ def write_macros(vals: dict, output_dir: Path) -> Path:
         nc("RGpfeasPct",  pct("rg_p_feas")),
         nc("PPpfeasPct",  pct("pp_p_feas")),
         nc("PPARcovPct",  pct("pp_ar_cov")),
+        "%",
+        "% ── PP all-earlier baseline ─────────────────────────────────────",
+        nc("PPallEarlier", ent("pp_all_earlier_baseline")),
         "%",
         "% ── Dataset sizes ───────────────────────────────────────────────",
         nc("RGnTotal",    "38{,}472"),
@@ -548,7 +553,8 @@ def main() -> None:
     vals["rg_pfeas_pct"] = _pct(vals.get("rg_p_feas"))
     out_dir = args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
-    write_table(vals, out_dir)
+    # Table is now static in the paper repo (uses \newcommand macros directly).
+    # write_table() is kept for reference but no longer called from the pipeline.
     write_macros(vals, out_dir)
     (FIGS / "table2_values.json").write_text(json.dumps(vals, indent=2, allow_nan=False) + "\n")
     print(json.dumps(vals, indent=2, allow_nan=False))
