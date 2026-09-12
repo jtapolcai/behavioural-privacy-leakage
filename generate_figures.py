@@ -225,10 +225,38 @@ def main() -> None:
     if not args.skip_pp:
         run("PP origin entropy (knapsack support)",
             SCRIPTS / "estimate_pp_origin_entropy.py",
-            ["--pp-data", pp, "--output-dir", fig], v, env)
+            ["--source", str(DATA / "privacypools-deanonymization"),
+             "--output", str(ROOT / "analysis" / "pp_origin_entropy")], v, env)
         run("PP k-window entropy",
             SCRIPTS / "estimate_pp_k_window.py",
             ["--pp-data", pp, "--output-dir", fig], v, env)
+
+    # ── 9b. PP M2 address-aggregated (comparable to RG address-level M2) ─────
+    # Outputs: Figures/entropy_models/pp_m2_addr.json
+    if not args.skip_pp:
+        run("PP M2 address-aggregated",
+            SCRIPTS / "compute_pp_m2_addr.py",
+            ["--scripts", str(SCRIPTS),
+             "--source",  str(DATA / "privacypools-deanonymization"),
+             "--output",  str(args.figures / "entropy_models" / "pp_m2_addr.json")], v, env)
+
+    # ── 9c. PP M3 (graph evidence: address reuse, relayer reuse, direct tx) ──
+    # Outputs: Figures/entropy_models/pp_m3_canonical.csv
+    if not args.skip_pp:
+        run("PP M3 canonical (AR / GR / PT variants)",
+            SCRIPTS / "compute_pp_m3.py",
+            ["--scripts",    str(SCRIPTS),
+             "--source",     str(DATA / "privacypools-deanonymization"),
+             "--output-dir", str(args.figures)], v, env)
+
+    # ── 9d. PP M4 (knapsack amount-matching participation) ───────────────────
+    # Outputs: Figures/entropy_models/pp_m4_canonical.csv
+    if not args.skip_pp:
+        run("PP M4 canonical (knapsack k=1,2,3 participation)",
+            SCRIPTS / "compute_pp_m4.py",
+            ["--scripts",    str(SCRIPTS),
+             "--source",     str(DATA / "privacypools-deanonymization"),
+             "--output-dir", str(args.figures)], v, env)
 
     # ── 10. Full entropy model table (M1–M4, RG + PP) ───────────────────────
     # Outputs: sec4_entropy_model_table.tex, figure_ch5_* CSVs
