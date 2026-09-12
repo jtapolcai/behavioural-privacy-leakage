@@ -229,7 +229,9 @@ def main() -> None:
              "--output", str(ROOT / "analysis" / "pp_origin_entropy")], v, env)
         run("PP k-window entropy",
             SCRIPTS / "estimate_pp_k_window.py",
-            ["--pp-data", pp, "--output-dir", fig], v, env)
+            ["--source", str(DATA / "privacypools-deanonymization"),
+             "--paper",  str(ROOT),
+             "--output", str(ROOT / "analysis" / "pp_k_window")], v, env)
 
     # ── 9b. PP M2 address-aggregated (comparable to RG address-level M2) ─────
     # Outputs: Figures/entropy_models/pp_m2_addr.json
