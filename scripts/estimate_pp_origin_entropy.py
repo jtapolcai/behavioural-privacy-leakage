@@ -148,12 +148,15 @@ def main(source, paper, output):
                     r50=robust(p,mask,.5,feasible); r90=robust(p,mask,.9,feasible)
                     n=len(p); h=entropy(p)
                     assert h<=math.log2(n)+1e-10
+                    n_feasible = int(feasible.sum())
                     row=dict(scenario=scenario,withdrawal_index=j,time_day=t,model=model,n_deposits=n,
                              followup_days=end-t,n_amount_origins=int(mask.sum()),n_direct_origins=int(direct.sum()),
+                             n_feasible=n_feasible,
                              H_uniform=math.log2(n),H_time=h,H_amount_feasible=entropy(conditioned(p,feasible)),H_knapsack_rho50=entropy(r50),H_knapsack_rho90=entropy(r90),
                              H_strict=entropy(q) if q is not None else math.nan,
                              H_direct_strict=entropy(q1) if q1 is not None else math.nan,
                              H0_amount=math.log2(mask.sum()) if mask.any() else math.nan,
+                             H0_feasible=math.log2(n_feasible) if n_feasible > 0 else math.nan,
                              time_mass_amount_support=float(p[mask].sum()),
                              time_mass_amount_infeasible=float(p[da[eligible]+TOL<amount].sum()),
                              max_p_time=float(p.max()),max_p_rho90=float(r90.max()),abstained=int(q is None))
